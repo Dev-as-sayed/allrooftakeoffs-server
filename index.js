@@ -111,6 +111,44 @@ async function run() {
       })
     );
 
+    // Login route
+    app.post(
+      "/login",
+      asyncHandler(async (req, res) => {
+        const { email, password } = req.body;
+
+        // Find user by email
+        const user = await userCollection.findOne({ email });
+        if (!user) {
+          return res
+            .status(httpStatus.UNAUTHORIZED)
+            .json({ message: "Invalid email or password" });
+        }
+
+        // Compare the provided password with the stored hashed password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+          return res
+            .status(httpStatus.UNAUTHORIZED)
+            .json({ message: "Invalid email or password" });
+        }
+
+        // Generate a JWT token
+        const token = jwt.sign(
+          { userId: user._id, email: user.email },
+          JWT_SECRET,
+          {
+            expiresIn: "1h", // Token expires in 1 hour
+          }
+        );
+
+        res.status(httpStatus.OK).json({
+          message: "Login successful",
+          token,
+        });
+      })
+    );
+
     /**
      * =========================
      *      PROJECTS
