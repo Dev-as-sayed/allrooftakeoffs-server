@@ -58,15 +58,30 @@ async function run() {
 
     /**
      * =========================
-     *         JWT
-     * =========================
-     */
-
-    /**
-     * =========================
      *      MIDDELWARES
      * =========================
      */
+
+    const authenticateToken = (req, res, next) => {
+      const token = req.headers["authorization"];
+
+      if (!token) {
+        return res
+          .status(httpStatus.UNAUTHORIZED)
+          .json({ message: "Access denied, token missing!" });
+      }
+
+      // Verify the token
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+          return res
+            .status(httpStatus.FORBIDDEN)
+            .json({ message: "Invalid or expired token" });
+        }
+        req.user = decoded; // Add decoded user data to the request
+        next();
+      });
+    };
     /**
      * ==================================================
      *                       USERS
@@ -136,14 +151,13 @@ async function run() {
         // Generate a JWT token
         const token = jwt.sign(
           { userId: user._id, email: user.email },
-          JWT_SECRET,
-          {
-            expiresIn: "1h", // Token expires in 1 hour
-          }
+          process.env.JWT_SECRET,
+          process.env.JWT_SECRET_EXPAIR_IN
         );
 
         res.status(httpStatus.OK).json({
           message: "Login successful",
+          user,
           token,
         });
       })
