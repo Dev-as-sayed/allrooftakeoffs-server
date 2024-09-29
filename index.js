@@ -55,6 +55,28 @@ async function run() {
     await client.connect();
     await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
+
+    /**
+     * =========================
+     *         JWT
+     * =========================
+     */
+
+    /**
+     * =========================
+     *      MIDDELWARES
+     * =========================
+     */
+    /**
+     * =========================
+     *      USERS
+     * =========================
+     */
+    /**
+     * =========================
+     *      PROJECTS
+     * =========================
+     */
   } catch (err) {
     logger.error("MongoDB connection error: " + err);
     process.exit(1); // Exit if MongoDB connection fails
@@ -63,23 +85,23 @@ async function run() {
 run().catch(console.dir);
 
 // Route to create a new user (with validation)
-app.post(
-  "/users",
-  asyncHandler(async (req, res) => {
-    const { error } = userSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
-    }
+// app.post(
+//   "/users",
+//   asyncHandler(async (req, res) => {
+//     const { error } = userSchema.validate(req.body);
+//     if (error) {
+//       return res.status(400).json({ message: error.details[0].message });
+//     }
 
-    const { username, password } = req.body;
-    const newUser = { username, password };
+//     const { username, password } = req.body;
+//     const newUser = { username, password };
 
-    await userCollection.insertOne(newUser);
-    res
-      .status(httpStatus.CREATED)
-      .json({ message: "User created successfully" });
-  })
-);
+//     await userCollection.insertOne(newUser);
+//     res
+//       .status(httpStatus.CREATED)
+//       .json({ message: "User created successfully" });
+//   })
+// );
 
 // Basic route
 app.get("/", (req, res) => {
