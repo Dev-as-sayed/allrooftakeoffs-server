@@ -1,0 +1,2 @@
+{"level":"error","message":"MongoDB connection error: Error: Cannot find module 'bcryptjs'\nRequire stack:\n- D:\\Client Projects\\allrooftakeoffs\\allrooftakeoffs-server\\index.js"}
+{"level":"error","message":"MongoDB connection error: Error: Cannot find module 'bcryptjs'\nRequire stack:\n- D:\\Client Projects\\allrooftakeoffs\\allrooftakeoffs-server\\index.js"}

@@ -68,10 +68,49 @@ async function run() {
      * =========================
      */
     /**
-     * =========================
-     *      USERS
-     * =========================
+     * ==================================================
+     *                       USERS
+     * ==================================================
      */
+
+    // User registration route
+    app.post(
+      "/register",
+      asyncHandler(async (req, res) => {
+        const { email, password } = req.body;
+
+        // Validate email and password
+        const { error } = userSchema.validate({ username: email, password });
+        if (error) {
+          return res
+            .status(httpStatus.BAD_REQUEST)
+            .json({ message: error.details[0].message });
+        }
+
+        // Check if the user already exists
+        const existingUser = await userCollection.findOne({ email });
+        if (existingUser) {
+          return res
+            .status(httpStatus.CONFLICT)
+            .json({ message: "User already exists" });
+        }
+
+        // Hash the password before saving to the database
+        const hashedPassword = await bcrypt.hash(
+          password,
+          process.env.BCRYPT_SOLT_ROUND
+        );
+
+        // Save the new user to the database
+        const newUser = { email, password: hashedPassword };
+        await userCollection.insertOne(newUser);
+
+        res
+          .status(httpStatus.CREATED)
+          .json({ message: "User registered successfully" });
+      })
+    );
+
     /**
      * =========================
      *      PROJECTS
