@@ -176,7 +176,25 @@ async function run() {
           });
         } catch (err) {
           res.status(httpStatus.FAILED_DEPENDENCY).json({
-            message: "Someting went worng, try again",
+            message: err.message || "Someting went worng, try again",
+            data: [],
+          });
+        }
+      })
+    );
+
+    app.get(
+      "/get-projects",
+      asyncHandler(async (req, res) => {
+        try {
+          const result = await porjectsCollection.find().toArray();
+          res.status(httpStatus.OK).json({
+            message: "Projects retrive successfully",
+            data: result,
+          });
+        } catch (err) {
+          res.status(httpStatus.FAILED_DEPENDENCY).json({
+            message: err.message || "Someting went worng, try again",
             data: [],
           });
         }
