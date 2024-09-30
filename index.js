@@ -38,6 +38,7 @@ const client = new MongoClient(uri, {
   },
 });
 const userCollection = client.db("allrooftakeoffs").collection("Users");
+const porjectsCollection = client.db("allrooftakeoffs").collection("Projects");
 
 // Input validation schema using Joi
 const userSchema = Joi.object({
@@ -157,9 +158,28 @@ async function run() {
 
         res.status(httpStatus.OK).json({
           message: "Login successful",
-          user,
+          data: user,
           token,
         });
+      })
+    );
+
+    app.post(
+      "/add-projects",
+      asyncHandler(async (req, res) => {
+        try {
+          const porjects = req.body;
+          const addPrejects = await porjectsCollection.insertMany(porjects);
+          res.status(httpStatus.OK).json({
+            message: "Projects added successfully",
+            data: addPrejects,
+          });
+        } catch (err) {
+          res.status(httpStatus.FAILED_DEPENDENCY).json({
+            message: "Someting went worng, try again",
+            data: [],
+          });
+        }
       })
     );
 
@@ -168,6 +188,8 @@ async function run() {
      *      PROJECTS
      * =========================
      */
+
+    app.post;
   } catch (err) {
     logger.error("MongoDB connection error: " + err);
     process.exit(1); // Exit if MongoDB connection fails
