@@ -163,6 +163,28 @@ async function run() {
      * ==================================================
      */
 
+    app.post("/add-projects", async (req, res) => {
+      try {
+        const projects = req.body;
+
+        const result = await porjectsCollection.insertMany(projects);
+
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "All porjects added successfully",
+          data: result,
+        });
+      } catch (err) {
+        return res.json({
+          success: false,
+          status: httpStatus.NO_CONTENT,
+          message: "Porjects added failed",
+          data: err,
+        });
+      }
+    });
+
     app.get("/get-projects", async (req, res) => {
       try {
         const result = await porjectsCollection.find().toArray();
