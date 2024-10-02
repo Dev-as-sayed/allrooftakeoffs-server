@@ -4,6 +4,8 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const httpStatus = require("http-status");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const Joi = require("joi");
 const winston = require("winston");
@@ -14,22 +16,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Logger setup using winston
-const logger = winston.createLogger({
-  level: "error",
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.File({ filename: "error.log" }),
-    new winston.transports.Console(),
-  ],
-});
-
 // Middleware
 app.use(cors());
 app.use(express.json()); // Parse JSON requests
 
 // MongoDB client setup
-const uri = process.env.MONGODB_URI || "your_mongo_uri_here";
+const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -37,26 +29,18 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
-const userCollection = client.db("allrooftakeoffs").collection("Users");
-const porjectsCollection = client.db("allrooftakeoffs").collection("Projects");
-
-// Input validation schema using Joi
-const userSchema = Joi.object({
-  username: Joi.string().min(3).required(),
-  password: Joi.string().min(6).required(),
-});
+const userCollection = client.db("ART").collection("Users");
+const porjectsCollection = client.db("ART").collection("Projects");
 
 // Error handling middleware for async functions
-const asyncHandler = (fn) => (req, res, next) =>
-  Promise.resolve(fn(req, res, next)).catch(next);
 
 // Async MongoDB connection
 async function run() {
   try {
-    await client.connect();
     await client.db("admin").command({ ping: 1 });
-    console.log("Successfully connected to MongoDB!");
-
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
     /**
      * =========================
      *      MIDDELWARES
@@ -89,150 +73,117 @@ async function run() {
      * ==================================================
      */
 
-    // User registration route
-    app.post(
-      "/register",
-      asyncHandler(async (req, res) => {
-        const { email, password } = req.body;
+    app.post("/register", async (req, res) => {
+      const newUserData = req.body;
 
-        // Validate email and password
-        const { error } = userSchema.validate({ username: email, password });
-        if (error) {
-          return res
-            .status(httpStatus.BAD_REQUEST)
-            .json({ message: error.details[0].message });
+      try {
+        const email = newUserData?.email;
+        const validateEmail = (email) => {
+          const emailPattern =
+            /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+          return emailPattern.test(email);
+        };
+        if (!validateEmail(email)) {
+          throw new Error("Give me valid email");
         }
 
-        // Check if the user already exists
-        const existingUser = await userCollection.findOne({ email });
-        if (existingUser) {
-          return res
-            .status(httpStatus.CONFLICT)
-            .json({ message: "User already exists" });
-        }
-
-        // Hash the password before saving to the database
-        const hashedPassword = await bcrypt.hash(
-          password,
-          process.env.BCRYPT_SOLT_ROUND
+        newUserData.password = await bcrypt.hash(
+          newUserData.password,
+          Number(process.env.BCRYPT_SOLT_ROUND)
         );
 
-        // Save the new user to the database
-        const newUser = { email, password: hashedPassword };
-        await userCollection.insertOne(newUser);
+        const isEmailIsAxist = await userCollection.findOne({ email: email });
+        if (isEmailIsAxist) {
+          throw new Error("This email is already exist");
+        }
 
-        res
-          .status(httpStatus.CREATED)
-          .json({ message: "User registered successfully" });
-      })
-    );
+        const user = { ...newUserData, isBlock: false, isDeleted: false };
 
-    // Login route
-    app.post(
-      "/login",
-      asyncHandler(async (req, res) => {
+        const createUser = await userCollection.insertOne(user);
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "All users retrive successfully",
+          data: createUser,
+        });
+      } catch (err) {
+        return res.json({
+          success: false,
+          status: httpStatus.BAD_REQUEST,
+          message: err?.message || "Someting went wrong",
+          data: err,
+        });
+      }
+    });
+
+    app.post("/login", async (req, res) => {
+      try {
         const { email, password } = req.body;
 
-        // Find user by email
         const user = await userCollection.findOne({ email });
         if (!user) {
-          return res
-            .status(httpStatus.UNAUTHORIZED)
-            .json({ message: "Invalid email or password" });
+          throw new Error("Invalid identity");
         }
 
-        // Compare the provided password with the stored hashed password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-          return res
-            .status(httpStatus.UNAUTHORIZED)
-            .json({ message: "Invalid email or password" });
+        if (user.isDeleted) {
+          throw new Error("User is deleted");
         }
 
-        // Generate a JWT token
+        const isPasswordMatch = await bcrypt.compare(password, user.password);
+        if (!isPasswordMatch) {
+          console.log("Password does not match");
+          throw new Error("Invalid email or password");
+        }
+
         const token = jwt.sign(
           { userId: user._id, email: user.email },
           process.env.JWT_SECRET,
-          process.env.JWT_SECRET_EXPAIR_IN
+          { expiresIn: process.env.JWT_SECRET_EXPAIR_IN }
         );
 
-        res.status(httpStatus.OK).json({
-          message: "Login successful",
-          data: user,
-          token,
+        user.password = "";
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "User retrieved successfully",
+          data: { user, token },
         });
-      })
-    );
-
-    app.post(
-      "/add-projects",
-      asyncHandler(async (req, res) => {
-        try {
-          const porjects = req.body;
-          const addPrejects = await porjectsCollection.insertMany(porjects);
-          res.status(httpStatus.OK).json({
-            message: "Projects added successfully",
-            data: addPrejects,
-          });
-        } catch (err) {
-          res.status(httpStatus.FAILED_DEPENDENCY).json({
-            message: err.message || "Someting went worng, try again",
-            data: [],
-          });
-        }
-      })
-    );
-
-    app.get(
-      "/get-projects",
-      asyncHandler(async (req, res) => {
-        try {
-          const result = await porjectsCollection.find().toArray();
-          res.status(httpStatus.OK).json({
-            message: "Projects retrive successfully",
-            data: result,
-          });
-        } catch (err) {
-          res.status(httpStatus.FAILED_DEPENDENCY).json({
-            message: err.message || "Someting went worng, try again",
-            data: [],
-          });
-        }
-      })
-    );
+      } catch (err) {
+        return res.status(httpStatus.FAILED_DEPENDENCY).json({
+          success: false,
+          message: "Login failed",
+          error: err.message,
+        });
+      }
+    });
 
     /**
-     * =========================
-     *      PROJECTS
-     * =========================
+     * ==================================================
+     *                       PROJECTS
+     * ==================================================
      */
 
-    app.post;
+    app.get("/get-projects", async (req, res) => {
+      try {
+        const result = await porjectsCollection.find().toArray();
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "All projects retrive successfully",
+          data: result,
+        });
+      } catch (err) {}
+    });
+
+    await client.connect();
+    await client.db("admin").command({ ping: 1 });
+    console.log("Successfully connected to MongoDB!");
   } catch (err) {
-    logger.error("MongoDB connection error: " + err);
+    // logger.error("MongoDB connection error: " + err);
     process.exit(1); // Exit if MongoDB connection fails
   }
 }
 run().catch(console.dir);
-
-// Route to create a new user (with validation)
-// app.post(
-//   "/users",
-//   asyncHandler(async (req, res) => {
-//     const { error } = userSchema.validate(req.body);
-//     if (error) {
-//       return res.status(400).json({ message: error.details[0].message });
-//     }
-
-//     const { username, password } = req.body;
-//     const newUser = { username, password };
-
-//     await userCollection.insertOne(newUser);
-//     res
-//       .status(httpStatus.CREATED)
-//       .json({ message: "User created successfully" });
-//   })
-// );
 
 // Basic route
 app.get("/", (req, res) => {
@@ -281,32 +232,7 @@ app.get("/", (req, res) => {
   res.status(httpStatus.OK).send(html);
 });
 
-// 404 Error Handling (Route not found)
-app.use((req, res, next) => {
-  res.status(httpStatus.NOT_FOUND).json({ message: "Route not found" });
-});
-
-// Centralized Error Handling Middleware
-app.use((err, req, res, next) => {
-  logger.error(err.message); // Log the error for debugging
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
-});
-
 // Server listening
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-});
-
-// Graceful shutdown on unhandled errors
-process.on("uncaughtException", (err) => {
-  logger.error("Uncaught Exception: " + err);
-  process.exit(1); // Exit the process to avoid an unstable state
-});
-
-process.on("unhandledRejection", (err) => {
-  logger.error("Unhandled Rejection: " + err);
-  process.exit(1); // Exit the process to avoid an unstable state
 });

@@ -9,3 +9,36 @@
 {"level":"error","message":"MongoDB connection error: MongoServerSelectionError: EC090000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
 {"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 303B0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
 {"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 483F0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: F4200000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 50180000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 9C360000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 84200000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: D03B0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 583E0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: CC3F0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 14430000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 840D0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 503F0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 503E0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 30010000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: EC1E0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 3C300000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 9C2F0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 2C0C0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 08110000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"MongoDB connection error: MongoServerSelectionError: 5C2D0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:1590:SSL alert number 80\n"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
+{"level":"error","message":"Expected double-quoted property name in JSON at position 291"}
