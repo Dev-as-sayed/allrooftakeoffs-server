@@ -47,26 +47,53 @@ async function run() {
      * =========================
      */
 
-    const authenticateToken = (req, res, next) => {
-      const token = req.headers["authorization"];
+    const authenticateToken = (role) => {
+      console.log(role);
 
-      if (!token) {
-        return res
-          .status(httpStatus.UNAUTHORIZED)
-          .json({ message: "Access denied, token missing!" });
-      }
+      return async (req, res, next) => {
+        // Extract the Authorization header
+        const authHeader = req.headers["authorization"];
 
-      // Verify the token
-      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) {
+        // Check if the Authorization header exists and starts with 'Bearer'
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
           return res
-            .status(httpStatus.FORBIDDEN)
-            .json({ message: "Invalid or expired token" });
+            .status(httpStatus.UNAUTHORIZED)
+            .json({ message: "Access denied, token missing!" });
         }
-        req.user = decoded; // Add decoded user data to the request
-        next();
-      });
+
+        // Get the token by removing the 'Bearer ' part
+        const token = authHeader.split(" ")[1];
+
+        // Verify the token
+        jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+          if (err) {
+            return res
+              .status(httpStatus.FORBIDDEN)
+              .json({ message: "Invalid or expired token" });
+          }
+
+          console.log("for varify", decoded);
+          const { email } = decoded;
+          const user = await userCollection.findOne({ email });
+
+          if (!user) {
+            return res
+              .status(httpStatus.FORBIDDEN)
+              .json({ message: "Invalid or expired token" });
+          }
+          if (!(user.role === role)) {
+            return res
+              .status(httpStatus.FORBIDDEN)
+              .json({ message: "Invalid or expired token" });
+          }
+
+          next();
+        });
+
+        // console.log("log user form middleware", user);
+      };
     };
+
     /**
      * ==================================================
      *                       USERS
@@ -156,6 +183,31 @@ async function run() {
         });
       }
     });
+
+    app.get(
+      "/get-users",
+      authenticateToken((role = "Admin")),
+      async (req, res) => {
+        try {
+          const users = await userCollection
+            .find({}, { projection: { password: 0 } })
+            .toArray();
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: "All users retrieved successfully",
+            data: users,
+          });
+        } catch (err) {
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: err.message || "Someting went wrong",
+            data: err,
+          });
+        }
+      }
+    );
 
     /**
      * ==================================================
