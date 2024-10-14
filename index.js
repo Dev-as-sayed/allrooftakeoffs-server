@@ -252,7 +252,24 @@ async function run() {
 
     app.get("/get-projects", async (req, res) => {
       try {
-        const result = await porjectsCollection.find().toArray();
+        let querys = {};
+        const { serch } = req.query;
+
+        if (serch) {
+          querys = {
+            $or: [
+              ({ name: { $regex: serch, $options: "i" } },
+              { description: { $regex: serch, $options: "i" } },
+              { country: { $regex: serch, $options: "i" } },
+              { posting_date: { $regex: serch, $options: "i" } },
+              { cost: { $regex: serch, $options: "i" } },
+              { dateline: { $regex: serch, $options: "i" } },
+              { summary: { $regex: serch, $options: "i" } }),
+            ],
+          };
+        }
+
+        const result = await porjectsCollection.find(querys).toArray();
         return res.json({
           success: true,
           status: httpStatus.OK,
