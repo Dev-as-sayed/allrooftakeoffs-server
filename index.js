@@ -6,7 +6,7 @@ const dotenv = require("dotenv");
 const httpStatus = require("http-status");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 const Joi = require("joi");
 const winston = require("winston");
 
@@ -189,8 +189,21 @@ async function run() {
       authenticateToken((role = "Admin")),
       async (req, res) => {
         try {
+          let querys = {};
+          const { serch } = req.query;
+
+          if (serch) {
+            querys = {
+              $or: [
+                ({ name: { $regex: serch, $options: "i" } },
+                { email: { $regex: serch, $options: "i" } },
+                { address: { $regex: serch, $options: "i" } },
+                { phone: { $regex: serch, $options: "i" } }),
+              ],
+            };
+          }
           const users = await userCollection
-            .find({}, { projection: { password: 0 } })
+            .find(querys, { projection: { password: 0 } })
             .toArray();
           return res.json({
             success: true,
@@ -247,6 +260,48 @@ async function run() {
           data: result,
         });
       } catch (err) {}
+    });
+
+    app.get("/get-project/:id", async (req, res) => {
+      try {
+        const { id } = req.params; // Extract project ID from request parameters
+
+        // Check if the ID is a valid MongoDB ObjectId
+        if (!ObjectId.isValid(id)) {
+          return res.status(httpStatus.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid project ID format",
+          });
+        }
+
+        // Fetch the project by ID from the projects collection
+        const project = await porjectsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        // If no project is found, return an error
+        if (!project) {
+          return res.status(httpStatus.NOT_FOUND).json({
+            success: false,
+            message: "Project not found",
+          });
+        }
+
+        // Return the project details
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "Project retrieved successfully",
+          data: project,
+        });
+      } catch (err) {
+        // Handle server errors
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          message: "Something went wrong",
+          error: err.message,
+        });
+      }
     });
 
     await client.connect();
