@@ -10,6 +10,12 @@ const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 const Joi = require("joi");
 const winston = require("winston");
 
+// google drive related
+const fs = require("fs");
+const { google } = require("googleapis");
+const apikeys = require("./apikeys.json");
+const SCOPE = ["https://www.googleapis.com/auth/drive"];
+
 // Load environment variables
 dotenv.config();
 
@@ -21,7 +27,9 @@ app.use(cors());
 app.use(express.json()); // Parse JSON requests
 
 // MongoDB client setup
-const uri = process.env.MONGODB_URI;
+// const uri = process.env.MONGODB_URI;
+const uri =
+  "mongodb+srv://ART-dev:ART-dev@artcluster0.8rabx.mongodb.net/?retryWrites=true&w=majority&appName=ARTCluster0";
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -93,6 +101,40 @@ async function run() {
         // console.log("log user form middleware", user);
       };
     };
+
+    // A Function that can provide access to google drive api
+    async function authorize() {
+      const jwtClient = new google.auth.JWT(
+        apikeys.client_email,
+        null,
+        apikeys.private_key,
+        SCOPE
+      );
+      await jwtClient.authorize();
+      return jwtClient;
+    }
+
+    // Helper function to upload a file to Google Drive
+    async function uploadFileToDrive(auth, fileName, mimeType, fileBuffer) {
+      const drive = google.drive({ version: "v3", auth });
+
+      const fileStream = new stream.PassThrough();
+      fileStream.end(fileBuffer);
+
+      const response = await drive.files.create({
+        resource: {
+          name: fileName,
+          mimeType: mimeType,
+        },
+        media: {
+          mimeType: mimeType,
+          body: fileStream,
+        },
+        fields: "id, webViewLink",
+      });
+
+      return response.data; // Returns the file ID and webViewLink
+    }
 
     /**
      * ==================================================
@@ -321,11 +363,68 @@ async function run() {
       }
     });
 
+    app.patch("/upload-file/:id", async (req, res) => {
+      try {
+        const { id } = req.params; // Get the project ID from params
+        const { fileName, mimeType, fileData } = req.body; // Expect file data from the request body
+
+        // Step 1: Validate incoming file data
+        if (!fileName || !mimeType || !fileData) {
+          return res.status(httpStatus.BAD_REQUEST).json({
+            success: false,
+            message:
+              "File data is missing. Ensure you send fileName, mimeType, and fileData.",
+          });
+        }
+
+        // Step 2: Convert base64 file data to a buffer
+        const fileBuffer = Buffer.from(fileData, "base64");
+
+        // Step 3: Authorize with Google Drive API
+        const auth = await authorize();
+
+        // Step 4: Upload the file to Google Drive
+        const driveResponse = await uploadFileToDrive(
+          auth,
+          fileName,
+          mimeType,
+          fileBuffer
+        );
+        const fileLink = driveResponse.webViewLink; // Get the Google Drive file link
+
+        // Step 5: Store file link in MongoDB
+        const result = await projectsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { fileLink: fileLink } }
+        );
+
+        // Step 6: Send success response
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "File uploaded and link saved successfully",
+          data: {
+            fileLink,
+            mongoUpdateResult: result,
+          },
+        });
+      } catch (err) {
+        // Handle server errors
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          message: "Something went wrong",
+          error: err.message,
+        });
+      }
+    });
+
     await client.connect();
     await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
   } catch (err) {
     // logger.error("MongoDB connection error: " + err);
+    console.log(err);
+
     process.exit(1); // Exit if MongoDB connection fails
   }
 }
