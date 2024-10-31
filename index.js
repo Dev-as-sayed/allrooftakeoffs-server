@@ -9,25 +9,22 @@ const jwt = require("jsonwebtoken");
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 const Joi = require("joi");
 const winston = require("winston");
+const multer = require("multer");
 
 // google drive related
 const fs = require("fs");
 const { google } = require("googleapis");
 const apikeys = require("./apikeys.json");
+const { Readable } = require("stream");
 const SCOPE = ["https://www.googleapis.com/auth/drive"];
+const upload = multer();
 
-// Load environment variables
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Middleware
 app.use(cors());
-app.use(express.json()); // Parse JSON requests
+app.use(express.json());
 
-// MongoDB client setup
-// const uri = process.env.MONGODB_URI;
 const uri =
   "mongodb+srv://ART-dev:ART-dev@artcluster0.8rabx.mongodb.net/?retryWrites=true&w=majority&appName=ARTCluster0";
 const client = new MongoClient(uri, {
@@ -37,18 +34,31 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
 const userCollection = client.db("ART").collection("Users");
 const porjectsCollection = client.db("ART").collection("Projects");
 
-// Error handling middleware for async functions
+let authClient;
 
-// Async MongoDB connection
+// Function to authorize Google Drive API
+async function authorize() {
+  const jwtClient = new google.auth.JWT(
+    apikeys.client_email,
+    null,
+    apikeys.private_key,
+    SCOPE,
+    { timeout: 10000 }
+  );
+  await jwtClient.authorize();
+  return jwtClient;
+}
+
 async function run() {
   try {
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    authClient = await authorize(); // Authorize once at startup
+    await client.connect();
+    console.log("Successfully connected to MongoDB!");
+
     /**
      * =========================
      *      MIDDELWARES
@@ -56,8 +66,6 @@ async function run() {
      */
 
     const authenticateToken = (role) => {
-      console.log(role);
-
       return async (req, res, next) => {
         // Extract the Authorization header
         const authHeader = req.headers["authorization"];
@@ -80,7 +88,6 @@ async function run() {
               .json({ message: "Invalid or expired token" });
           }
 
-          console.log("for varify", decoded);
           const { email } = decoded;
           const user = await userCollection.findOne({ email });
 
@@ -101,40 +108,6 @@ async function run() {
         // console.log("log user form middleware", user);
       };
     };
-
-    // A Function that can provide access to google drive api
-    async function authorize() {
-      const jwtClient = new google.auth.JWT(
-        apikeys.client_email,
-        null,
-        apikeys.private_key,
-        SCOPE
-      );
-      await jwtClient.authorize();
-      return jwtClient;
-    }
-
-    // Helper function to upload a file to Google Drive
-    async function uploadFileToDrive(auth, fileName, mimeType, fileBuffer) {
-      const drive = google.drive({ version: "v3", auth });
-
-      const fileStream = new stream.PassThrough();
-      fileStream.end(fileBuffer);
-
-      const response = await drive.files.create({
-        resource: {
-          name: fileName,
-          mimeType: mimeType,
-        },
-        media: {
-          mimeType: mimeType,
-          body: fileStream,
-        },
-        fields: "id, webViewLink",
-      });
-
-      return response.data; // Returns the file ID and webViewLink
-    }
 
     /**
      * ==================================================
@@ -172,7 +145,7 @@ async function run() {
         return res.json({
           success: true,
           status: httpStatus.OK,
-          message: "All users retrive successfully",
+          message: "Registration successful",
           data: createUser,
         });
       } catch (err) {
@@ -234,6 +207,12 @@ async function run() {
           let querys = {};
           const { serch } = req.query;
 
+          // if (serch) {
+          //   querys = serch;
+          // }
+          // console.log(querys);
+          console.log(serch);
+
           if (serch) {
             querys = {
               $or: [
@@ -244,6 +223,8 @@ async function run() {
               ],
             };
           }
+          console.log(querys);
+
           const users = await userCollection
             .find(querys, { projection: { password: 0 } })
             .toArray();
@@ -292,10 +273,34 @@ async function run() {
       }
     });
 
+    app.post("/addProject", async (req, res) => {
+      const project = req.body;
+      try {
+        if (!project) {
+          return { message: "project is empty" };
+        }
+
+        const result = await porjectsCollection.insertOne(project);
+
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "Porject added successfully",
+          data: result,
+        });
+      } catch (err) {
+        return err;
+      }
+    });
+
     app.get("/get-projects", async (req, res) => {
       try {
         let querys = {};
-        const { serch } = req.query;
+        const serch = req.query;
+
+        if (serch) {
+          querys = serch;
+        }
 
         if (serch) {
           querys = {
@@ -311,7 +316,7 @@ async function run() {
           };
         }
 
-        const result = await porjectsCollection.find(querys).toArray();
+        const result = await porjectsCollection.find().toArray();
         return res.json({
           success: true,
           status: httpStatus.OK,
@@ -363,59 +368,151 @@ async function run() {
       }
     });
 
-    app.patch("/upload-file/:id", async (req, res) => {
-      try {
-        const { id } = req.params; // Get the project ID from params
-        const { fileName, mimeType, fileData } = req.body; // Expect file data from the request body
+    // app.patch("/upload-file/:id", async (req, res) => {
+    //   try {
+    //     const { id } = req.params;
+    //     const { file } = req.body;
+    //     console.log("hit on uploade file", file);
 
-        // Step 1: Validate incoming file data
-        if (!fileName || !mimeType || !fileData) {
-          return res.status(httpStatus.BAD_REQUEST).json({
-            success: false,
-            message:
-              "File data is missing. Ensure you send fileName, mimeType, and fileData.",
-          });
-        }
+    //     if (!fileData) {
+    //       return res.status(400).json({
+    //         success: false,
+    //         message: "No file data provided.",
+    //       });
+    //     }
 
-        // Step 2: Convert base64 file data to a buffer
-        const fileBuffer = Buffer.from(fileData, "base64");
+    //     // Convert the base64 file data to a buffer
+    //     const fileBuffer = Buffer.from(fileData, "base64");
 
-        // Step 3: Authorize with Google Drive API
-        const auth = await authorize();
+    //     // Google Drive Authorization
+    //     const auth = await authorize(); // Make sure to implement the authorize function
 
-        // Step 4: Upload the file to Google Drive
-        const driveResponse = await uploadFileToDrive(
-          auth,
-          fileName,
-          mimeType,
-          fileBuffer
-        );
-        const fileLink = driveResponse.webViewLink; // Get the Google Drive file link
+    //     // Upload file to Google Drive
+    //     const driveResponse = await uploadFileInChunks(
+    //       auth,
+    //       fileName,
+    //       mimeType,
+    //       fileBuffer
+    //     );
 
-        // Step 5: Store file link in MongoDB
-        const result = await projectsCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { fileLink: fileLink } }
-        );
+    //     // Get the webViewLink
+    //     const fileLink = driveResponse.webViewLink;
 
-        // Step 6: Send success response
-        return res.json({
-          success: true,
-          status: httpStatus.OK,
-          message: "File uploaded and link saved successfully",
-          data: {
-            fileLink,
-            mongoUpdateResult: result,
-          },
-        });
-      } catch (err) {
-        // Handle server errors
-        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
-          success: false,
-          message: "Something went wrong",
-          error: err.message,
-        });
+    //     // Update the MongoDB with the file link
+    //     const result = await porjectsCollection.updateOne(
+    //       { _id: new ObjectId(id) },
+    //       { $set: { fileLink: fileLink } }
+    //     );
+
+    //     return res.status(200).json({
+    //       success: true,
+    //       message: "File uploaded and link saved successfully",
+    //       data: {
+    //         fileLink,
+    //         mongoUpdateResult: result,
+    //       },
+    //     });
+    //   } catch (err) {
+    //     return res.status(500).json({
+    //       success: false,
+    //       message: "An error occurred during file upload",
+    //       error: err.message,
+    //     });
+    //   }
+    // });
+
+    // API endpoint for file upload
+
+    // Update the app.patch for handling file uploads
+    // app.patch("/upload-file/:id", upload.single("file"), async (req, res) => {
+    //   try {
+    //     const { id } = req.params;
+
+    //     // Check if a file was uploaded
+    //     if (!req.file) {
+    //       return res.status(400).json({
+    //         success: false,
+    //         message: "No file uploaded.",
+    //       });
+    //     }
+
+    //     console.log(req.file);
+
+    //     const fileName = req.file.originalname; // Get the original file name
+    //     const mimeType = req.file.mimetype; // Get the MIME type of the file
+    //     const fileBuffer = req.file.buffer; // Get the file buffer from Multer
+
+    //     // Google Drive Authorization
+    //     const auth = await authorize(); // Make sure to implement the authorize function
+
+    //     // Upload file to Google Drive
+    //     const driveResponse = await uploadFileInChunks(
+    //       auth,
+    //       fileName,
+    //       mimeType,
+    //       fileBuffer
+    //     );
+
+    //     // Get the webViewLink
+    //     const fileLink = driveResponse.webViewLink;
+
+    //     console.log(fileLink);
+
+    //     // Update the MongoDB with the file link
+    //     const result = await porjectsCollection.updateOne(
+    //       { _id: new ObjectId(id) },
+    //       { $set: { fileLink: fileLink } }
+    //     );
+
+    //     return res.status(200).json({
+    //       success: true,
+    //       message: "File uploaded and link saved successfully",
+    //       data: {
+    //         fileLink,
+    //         mongoUpdateResult: result,
+    //       },
+    //     });
+    //   } catch (err) {
+    //     return res.status(500).json({
+    //       success: false,
+    //       message: "An error occurred during file upload",
+    //       error: err.message,
+    //     });
+    //   }
+    // });
+
+    app.post("/upload-file/:id", upload.single("file"), async (req, res) => {
+      if (!authClient) {
+        return res
+          .status(500)
+          .json({ error: "Google Drive authorization failed." });
       }
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded." });
+      }
+
+      const drive = google.drive({ version: "v3", auth: authClient });
+      const fileStream = new Readable();
+      fileStream.push(req.file.buffer);
+      fileStream.push(null);
+
+      const fileMetaData = {
+        name: req.file.originalname || "file",
+        parents: ["1yUGf8duNukcIgv0SuYqz0QhKdjkSxrbE"],
+      };
+
+      const uploadOnDrive = await drive.files.create({
+        resource: fileMetaData,
+        media: {
+          body: fileStream,
+          mimeType: req.file.mimetype,
+        },
+        fields: "id",
+      });
+
+      res
+        .status(200)
+        .json({ message: "File uploaded successfully!", uploadOnDrive });
     });
 
     await client.connect();
