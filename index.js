@@ -501,7 +501,7 @@ async function run() {
         parents: ["1yUGf8duNukcIgv0SuYqz0QhKdjkSxrbE"],
       };
 
-      const uploadOnDrive = await drive.files.create({
+      const uploadResponse = await drive.files.create({
         resource: fileMetaData,
         media: {
           body: fileStream,
@@ -510,9 +510,49 @@ async function run() {
         fields: "id",
       });
 
-      res
-        .status(200)
-        .json({ message: "File uploaded successfully!", uploadOnDrive });
+      const fileId = uploadResponse.data.id;
+      const fileName = uploadResponse.data.name;
+
+      await drive.permissions.create({
+        fileId,
+        requestBody: {
+          role: "reader",
+          type: "anyone",
+        },
+      });
+
+      const file = await drive.files.get({
+        fileId,
+        fields: "webViewLink, webContentLink",
+      });
+
+      console.log({
+        id: req.params.id,
+        fileName: fileName,
+        webViewLink: file.data.webViewLink,
+        downloadableLink: file.data.webContentLink,
+      });
+
+      const result = await porjectsCollection.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        {
+          $push: {
+            files: {
+              fileName: fileName,
+              webViewLink: file.data.webViewLink,
+              downloadableLink: file.data.webContentLink,
+            },
+          },
+        }
+      );
+
+      // Return the project details
+      return res.json({
+        success: true,
+        status: httpStatus.OK,
+        message: "File uploaded successfully!",
+        data: result,
+      });
     });
 
     await client.connect();
