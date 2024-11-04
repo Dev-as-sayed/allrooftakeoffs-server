@@ -22,6 +22,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
+// midleWare
+app.use(
+  cors({
+    origin: [
+      "https://joyful-lollipop-b092b1.netlify.app",
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  })
+);
 
 const uri =
   "mongodb+srv://ART-dev:ART-dev@artcluster0.8rabx.mongodb.net/?retryWrites=true&w=majority&appName=ARTCluster0";
@@ -65,7 +75,7 @@ async function run() {
      * =========================
      */
 
-    const authenticateToken = (role) => {
+    const authenticateToken = () => {
       return async (req, res, next) => {
         // Extract the Authorization header
         const authHeader = req.headers["authorization"];
@@ -96,16 +106,56 @@ async function run() {
               .status(httpStatus.FORBIDDEN)
               .json({ message: "Invalid or expired token" });
           }
-          if (!(user.role === role)) {
-            return res
-              .status(httpStatus.FORBIDDEN)
-              .json({ message: "Invalid or expired token" });
-          }
 
           next();
         });
 
         // console.log("log user form middleware", user);
+      };
+    };
+
+    const authenticateAdmin = () => {
+      return async (req, res, next) => {
+        // Extract the Authorization header
+        const authHeader = req.headers["authorization"];
+
+        // Check if the Authorization header exists and starts with 'Bearer'
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return res
+            .status(httpStatus.UNAUTHORIZED)
+            .json({ message: "Access denied, token missing!" });
+        }
+
+        // Get the token by removing the 'Bearer ' part
+        const token = authHeader.split(" ")[1];
+
+        // Verify the token
+        jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+          if (err) {
+            return res
+              .status(httpStatus.FORBIDDEN)
+              .json({ message: "Invalid or expired token" });
+          }
+
+          const { email } = decoded;
+          const user = await userCollection.findOne({ email });
+
+          if (!user) {
+            return res
+              .status(httpStatus.FORBIDDEN)
+              .json({ message: "Invalid or expired token" });
+          }
+
+          // Check if the user has an admin role
+          if (user.role !== "Admin") {
+            return res
+              .status(httpStatus.FORBIDDEN)
+              .json({ message: "Access denied, admin privileges required" });
+          }
+
+          // User is authenticated and has admin role
+          next();
+        });
       };
     };
 
@@ -201,7 +251,8 @@ async function run() {
 
     app.get(
       "/get-users",
-      authenticateToken((role = "Admin")),
+      authenticateToken(),
+      authenticateAdmin(),
       async (req, res) => {
         try {
           let querys = {};
@@ -247,7 +298,8 @@ async function run() {
 
     app.get(
       "/get-userData",
-      authenticateToken((role = "Admin")),
+      authenticateToken(),
+      authenticateAdmin(),
       async (req, res) => {
         try {
           const users = await userCollection
@@ -281,7 +333,8 @@ async function run() {
 
     app.post(
       "/add-projects",
-      // authenticateToken((role = "User")),
+      authenticateToken(),
+      authenticateAdmin(),
       async (req, res) => {
         try {
           const projects = req.body;
@@ -305,144 +358,125 @@ async function run() {
       }
     );
 
-    app.post(
-      "/addProject",
-      authenticateToken((role = "User")),
-      async (req, res) => {
-        const project = req.body;
-        try {
-          if (!project) {
-            return { message: "project is empty" };
-          }
-
-          const result = await porjectsCollection.insertOne(project);
-
-          return res.json({
-            success: true,
-            status: httpStatus.OK,
-            message: "Porject added successfully",
-            data: result,
-          });
-        } catch (err) {
-          return err;
+    app.post("/addProject", authenticateToken(), async (req, res) => {
+      const project = req.body;
+      try {
+        if (!project) {
+          return { message: "project is empty" };
         }
+
+        const result = await porjectsCollection.insertOne(project);
+
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "Porject added successfully",
+          data: result,
+        });
+      } catch (err) {
+        return err;
       }
-    );
+    });
 
-    app.get(
-      "/get-projects",
-      authenticateToken((role = "User")),
-      async (req, res) => {
-        try {
-          let querys = {};
-          const serch = req.query;
+    app.get("/get-projects", authenticateToken(), async (req, res) => {
+      try {
+        let querys = {};
+        const serch = req.query;
 
-          if (serch) {
-            querys = serch;
-          }
+        if (serch) {
+          querys = serch;
+        }
 
-          if (serch) {
-            querys = {
-              $or: [
-                ({ name: { $regex: serch, $options: "i" } },
-                { description: { $regex: serch, $options: "i" } },
-                { country: { $regex: serch, $options: "i" } },
-                { posting_date: { $regex: serch, $options: "i" } },
-                { cost: { $regex: serch, $options: "i" } },
-                { dateline: { $regex: serch, $options: "i" } },
-                { summary: { $regex: serch, $options: "i" } }),
-              ],
-            };
-          }
+        if (serch) {
+          querys = {
+            $or: [
+              ({ name: { $regex: serch, $options: "i" } },
+              { description: { $regex: serch, $options: "i" } },
+              { country: { $regex: serch, $options: "i" } },
+              { posting_date: { $regex: serch, $options: "i" } },
+              { cost: { $regex: serch, $options: "i" } },
+              { dateline: { $regex: serch, $options: "i" } },
+              { summary: { $regex: serch, $options: "i" } }),
+            ],
+          };
+        }
 
-          const result = await porjectsCollection.find().toArray();
-          return res.json({
-            success: true,
-            status: httpStatus.OK,
-            message: "All projects retrive successfully",
-            data: result,
-          });
-        } catch (err) {}
-      }
-    );
+        const result = await porjectsCollection.find().toArray();
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "All projects retrive successfully",
+          data: result,
+        });
+      } catch (err) {}
+    });
 
-    app.get(
-      "/get-project/:id",
-      authenticateToken((role = "User")),
-      async (req, res) => {
-        try {
-          const { id } = req.params; // Extract project ID from request parameters
+    app.get("/get-project/:id", authenticateToken(), async (req, res) => {
+      try {
+        const { id } = req.params; // Extract project ID from request parameters
 
-          // Check if the ID is a valid MongoDB ObjectId
-          if (!ObjectId.isValid(id)) {
-            return res.status(httpStatus.BAD_REQUEST).json({
-              success: false,
-              message: "Invalid project ID format",
-            });
-          }
-
-          // Fetch the project by ID from the projects collection
-          const project = await porjectsCollection.findOne({
-            _id: new ObjectId(id),
-          });
-
-          // If no project is found, return an error
-          if (!project) {
-            return res.status(httpStatus.NOT_FOUND).json({
-              success: false,
-              message: "Project not found",
-            });
-          }
-
-          // Return the project details
-          return res.json({
-            success: true,
-            status: httpStatus.OK,
-            message: "Project retrieved successfully",
-            data: project,
-          });
-        } catch (err) {
-          // Handle server errors
-          return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+        // Check if the ID is a valid MongoDB ObjectId
+        if (!ObjectId.isValid(id)) {
+          return res.status(httpStatus.BAD_REQUEST).json({
             success: false,
-            message: "Something went wrong",
-            error: err.message,
+            message: "Invalid project ID format",
           });
         }
+
+        // Fetch the project by ID from the projects collection
+        const project = await porjectsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        // If no project is found, return an error
+        if (!project) {
+          return res.status(httpStatus.NOT_FOUND).json({
+            success: false,
+            message: "Project not found",
+          });
+        }
+
+        // Return the project details
+        return res.json({
+          success: true,
+          status: httpStatus.OK,
+          message: "Project retrieved successfully",
+          data: project,
+        });
+      } catch (err) {
+        // Handle server errors
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          message: "Something went wrong",
+          error: err.message,
+        });
       }
-    );
+    });
 
     app.get(
-      "/get-projects/:id",
-      authenticateToken((role = "User")),
+      "/get-projects/:assignedId",
+      // authenticateToken(),
       async (req, res) => {
+        console.log("hit the endpoint");
+
         try {
-          const { id } = req.params; // Extract project ID from request parameters
+          const { assignedId } = req.params; // Extract assigned ID from request parameters
 
-          console.log(id);
-
-          // Fetch the project by ID from the projects collection
-          const project = porjectsCollection.find({
-            assinedOn: id,
-          });
-          // If no project is found, return an error
-          if (!project) {
-            return res.status(httpStatus.NOT_FOUND).json({
-              success: false,
-              message: "Project not found",
-            });
-          }
+          // Use MongoDB's find() with a query on assignedOn._id
+          const projects = await porjectsCollection
+            .find({ "assignedOn._id": assignedId })
+            .toArray();
 
           // Return the project details
           return res.json({
             success: true,
-            status: httpStatus.OK,
+            status: 200,
             message: "Projects retrieved successfully",
-            data: project,
+            data: projects,
           });
         } catch (err) {
           // Handle server errors
-          return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+          return res.status(500).json({
             success: false,
             message: "Something went wrong",
             error: err.message,
@@ -453,7 +487,8 @@ async function run() {
 
     app.post(
       "/upload-file/:id",
-      authenticateToken((role = "Admin")),
+      authenticateToken(),
+      authenticateAdmin(),
       upload.single("file"),
       async (req, res) => {
         console.log(req.file);
@@ -537,7 +572,8 @@ async function run() {
 
     app.patch(
       "/asignUser/:projectId",
-      authenticateToken((role = "Admin")),
+      authenticateToken(),
+      authenticateAdmin(),
       async (req, res) => {
         try {
           const { projectId } = req.params;
