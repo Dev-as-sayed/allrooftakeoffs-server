@@ -7,8 +7,6 @@ const httpStatus = require("http-status");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
-const Joi = require("joi");
-const winston = require("winston");
 const multer = require("multer");
 
 // google drive related
@@ -41,13 +39,16 @@ const porjectsCollection = client.db("ART").collection("Projects");
 let authClient;
 
 // Function to authorize Google Drive API
+// Function to authorize Google Drive API
 async function authorize() {
   const jwtClient = new google.auth.JWT(
     apikeys.client_email,
     null,
     apikeys.private_key,
-    SCOPE,
-    { timeout: 10000 }
+    SCOPE
+    // {
+    //   timeout: 30000, // Set timeout to 30 seconds (adjust as needed)
+    // }
   );
   await jwtClient.authorize();
   return jwtClient;
@@ -55,7 +56,6 @@ async function authorize() {
 
 async function run() {
   try {
-    authClient = await authorize(); // Authorize once at startup
     await client.connect();
     console.log("Successfully connected to MongoDB!");
 
@@ -245,315 +245,346 @@ async function run() {
       }
     );
 
+    app.get(
+      "/get-userData",
+      authenticateToken((role = "Admin")),
+      async (req, res) => {
+        try {
+          const users = await userCollection
+            .find({}, { projection: { _id: 1, name: 1, image: 1 } })
+            .toArray();
+
+          console.log(users);
+
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: "All users retrieved successfully",
+            data: users,
+          });
+        } catch (err) {
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: err.message || "Someting went wrong",
+            data: err,
+          });
+        }
+      }
+    );
+
     /**
      * ==================================================
      *                       PROJECTS
      * ==================================================
      */
 
-    app.post("/add-projects", async (req, res) => {
-      try {
-        const projects = req.body;
+    app.post(
+      "/add-projects",
+      // authenticateToken((role = "User")),
+      async (req, res) => {
+        try {
+          const projects = req.body;
 
-        const result = await porjectsCollection.insertMany(projects);
+          const result = await porjectsCollection.insertMany(projects);
 
-        return res.json({
-          success: true,
-          status: httpStatus.OK,
-          message: "All porjects added successfully",
-          data: result,
-        });
-      } catch (err) {
-        return res.json({
-          success: false,
-          status: httpStatus.NO_CONTENT,
-          message: "Porjects added failed",
-          data: err,
-        });
-      }
-    });
-
-    app.post("/addProject", async (req, res) => {
-      const project = req.body;
-      try {
-        if (!project) {
-          return { message: "project is empty" };
-        }
-
-        const result = await porjectsCollection.insertOne(project);
-
-        return res.json({
-          success: true,
-          status: httpStatus.OK,
-          message: "Porject added successfully",
-          data: result,
-        });
-      } catch (err) {
-        return err;
-      }
-    });
-
-    app.get("/get-projects", async (req, res) => {
-      try {
-        let querys = {};
-        const serch = req.query;
-
-        if (serch) {
-          querys = serch;
-        }
-
-        if (serch) {
-          querys = {
-            $or: [
-              ({ name: { $regex: serch, $options: "i" } },
-              { description: { $regex: serch, $options: "i" } },
-              { country: { $regex: serch, $options: "i" } },
-              { posting_date: { $regex: serch, $options: "i" } },
-              { cost: { $regex: serch, $options: "i" } },
-              { dateline: { $regex: serch, $options: "i" } },
-              { summary: { $regex: serch, $options: "i" } }),
-            ],
-          };
-        }
-
-        const result = await porjectsCollection.find().toArray();
-        return res.json({
-          success: true,
-          status: httpStatus.OK,
-          message: "All projects retrive successfully",
-          data: result,
-        });
-      } catch (err) {}
-    });
-
-    app.get("/get-project/:id", async (req, res) => {
-      try {
-        const { id } = req.params; // Extract project ID from request parameters
-
-        // Check if the ID is a valid MongoDB ObjectId
-        if (!ObjectId.isValid(id)) {
-          return res.status(httpStatus.BAD_REQUEST).json({
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: "All porjects added successfully",
+            data: result,
+          });
+        } catch (err) {
+          return res.json({
             success: false,
-            message: "Invalid project ID format",
+            status: httpStatus.NO_CONTENT,
+            message: "Porjects added failed",
+            data: err,
           });
         }
+      }
+    );
 
-        // Fetch the project by ID from the projects collection
-        const project = await porjectsCollection.findOne({
-          _id: new ObjectId(id),
-        });
+    app.post(
+      "/addProject",
+      authenticateToken((role = "User")),
+      async (req, res) => {
+        const project = req.body;
+        try {
+          if (!project) {
+            return { message: "project is empty" };
+          }
 
-        // If no project is found, return an error
-        if (!project) {
-          return res.status(httpStatus.NOT_FOUND).json({
+          const result = await porjectsCollection.insertOne(project);
+
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: "Porject added successfully",
+            data: result,
+          });
+        } catch (err) {
+          return err;
+        }
+      }
+    );
+
+    app.get(
+      "/get-projects",
+      authenticateToken((role = "User")),
+      async (req, res) => {
+        try {
+          let querys = {};
+          const serch = req.query;
+
+          if (serch) {
+            querys = serch;
+          }
+
+          if (serch) {
+            querys = {
+              $or: [
+                ({ name: { $regex: serch, $options: "i" } },
+                { description: { $regex: serch, $options: "i" } },
+                { country: { $regex: serch, $options: "i" } },
+                { posting_date: { $regex: serch, $options: "i" } },
+                { cost: { $regex: serch, $options: "i" } },
+                { dateline: { $regex: serch, $options: "i" } },
+                { summary: { $regex: serch, $options: "i" } }),
+              ],
+            };
+          }
+
+          const result = await porjectsCollection.find().toArray();
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: "All projects retrive successfully",
+            data: result,
+          });
+        } catch (err) {}
+      }
+    );
+
+    app.get(
+      "/get-project/:id",
+      authenticateToken((role = "User")),
+      async (req, res) => {
+        try {
+          const { id } = req.params; // Extract project ID from request parameters
+
+          // Check if the ID is a valid MongoDB ObjectId
+          if (!ObjectId.isValid(id)) {
+            return res.status(httpStatus.BAD_REQUEST).json({
+              success: false,
+              message: "Invalid project ID format",
+            });
+          }
+
+          // Fetch the project by ID from the projects collection
+          const project = await porjectsCollection.findOne({
+            _id: new ObjectId(id),
+          });
+
+          // If no project is found, return an error
+          if (!project) {
+            return res.status(httpStatus.NOT_FOUND).json({
+              success: false,
+              message: "Project not found",
+            });
+          }
+
+          // Return the project details
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: "Project retrieved successfully",
+            data: project,
+          });
+        } catch (err) {
+          // Handle server errors
+          return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
             success: false,
-            message: "Project not found",
+            message: "Something went wrong",
+            error: err.message,
           });
         }
+      }
+    );
+
+    app.get(
+      "/get-projects/:id",
+      authenticateToken((role = "User")),
+      async (req, res) => {
+        try {
+          const { id } = req.params; // Extract project ID from request parameters
+
+          console.log(id);
+
+          // Fetch the project by ID from the projects collection
+          const project = porjectsCollection.find({
+            assinedOn: id,
+          });
+          // If no project is found, return an error
+          if (!project) {
+            return res.status(httpStatus.NOT_FOUND).json({
+              success: false,
+              message: "Project not found",
+            });
+          }
+
+          // Return the project details
+          return res.json({
+            success: true,
+            status: httpStatus.OK,
+            message: "Projects retrieved successfully",
+            data: project,
+          });
+        } catch (err) {
+          // Handle server errors
+          return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: "Something went wrong",
+            error: err.message,
+          });
+        }
+      }
+    );
+
+    app.post(
+      "/upload-file/:id",
+      authenticateToken((role = "Admin")),
+      upload.single("file"),
+      async (req, res) => {
+        console.log(req.file);
+        authClient = await authorize(); // Authorize once at startup
+
+        if (!authClient) {
+          return res
+            .status(500)
+            .json({ error: "Google Drive authorization failed." });
+        }
+        if (!req.file) {
+          return res.status(400).json({ error: "No file uploaded." });
+        }
+
+        const drive = google.drive({ version: "v3", auth: authClient });
+        const fileStream = new Readable();
+        fileStream.push(req.file.buffer);
+        fileStream.push(null);
+
+        const fileMetaData = {
+          name: req.file.originalname || "file",
+          parents: ["1yUGf8duNukcIgv0SuYqz0QhKdjkSxrbE"],
+        };
+
+        const uploadResponse = await drive.files.create({
+          resource: fileMetaData,
+          media: {
+            body: fileStream,
+            mimeType: req.file.mimetype,
+          },
+          fields: "id",
+        });
+
+        const fileId = uploadResponse.data.id;
+        const fileName = req.file.originalname;
+
+        console.log(uploadResponse);
+
+        await drive.permissions.create({
+          fileId,
+          requestBody: {
+            role: "reader",
+            type: "anyone",
+          },
+        });
+
+        const file = await drive.files.get({
+          fileId,
+          fields: "webViewLink, webContentLink",
+        });
+
+        console.log({
+          id: req.params.id,
+          fileName: fileName,
+          webViewLink: file.data.webViewLink,
+          downloadableLink: file.data.webContentLink,
+        });
+
+        const result = await porjectsCollection.updateOne(
+          { _id: new ObjectId(req.params.id) },
+          {
+            $push: {
+              files: {
+                fileName: fileName,
+                webViewLink: file.data.webViewLink,
+                downloadableLink: file.data.webContentLink,
+              },
+            },
+          }
+        );
 
         // Return the project details
         return res.json({
           success: true,
           status: httpStatus.OK,
-          message: "Project retrieved successfully",
-          data: project,
-        });
-      } catch (err) {
-        // Handle server errors
-        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
-          success: false,
-          message: "Something went wrong",
-          error: err.message,
+          message: "File uploaded successfully!",
+          data: result,
         });
       }
-    });
+    );
 
-    // app.patch("/upload-file/:id", async (req, res) => {
-    //   try {
-    //     const { id } = req.params;
-    //     const { file } = req.body;
-    //     console.log("hit on uploade file", file);
+    app.patch(
+      "/asignUser/:projectId",
+      authenticateToken((role = "Admin")),
+      async (req, res) => {
+        try {
+          const { projectId } = req.params;
+          const assignedOn = req.body;
 
-    //     if (!fileData) {
-    //       return res.status(400).json({
-    //         success: false,
-    //         message: "No file data provided.",
-    //       });
-    //     }
+          if (!ObjectId.isValid(projectId)) {
+            return res.status(httpStatus.BAD_REQUEST).json({
+              success: false,
+              message: "Invalid project ID format",
+            });
+          }
 
-    //     // Convert the base64 file data to a buffer
-    //     const fileBuffer = Buffer.from(fileData, "base64");
+          const project = await porjectsCollection.findOne({
+            _id: new ObjectId(projectId),
+          });
+          if (!project) {
+            return res.status(httpStatus.NOT_FOUND).json({
+              success: false,
+              message: "Project not found",
+            });
+          }
 
-    //     // Google Drive Authorization
-    //     const auth = await authorize(); // Make sure to implement the authorize function
+          // Perform the update
+          const updatedProject = await porjectsCollection.updateOne(
+            { _id: new ObjectId(projectId) },
+            { $set: { assignedOn } }
+          );
 
-    //     // Upload file to Google Drive
-    //     const driveResponse = await uploadFileInChunks(
-    //       auth,
-    //       fileName,
-    //       mimeType,
-    //       fileBuffer
-    //     );
+          if (updatedProject.modifiedCount === 0) {
+            return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+              success: false,
+              message: "Failed to assign user to the project",
+            });
+          }
 
-    //     // Get the webViewLink
-    //     const fileLink = driveResponse.webViewLink;
-
-    //     // Update the MongoDB with the file link
-    //     const result = await porjectsCollection.updateOne(
-    //       { _id: new ObjectId(id) },
-    //       { $set: { fileLink: fileLink } }
-    //     );
-
-    //     return res.status(200).json({
-    //       success: true,
-    //       message: "File uploaded and link saved successfully",
-    //       data: {
-    //         fileLink,
-    //         mongoUpdateResult: result,
-    //       },
-    //     });
-    //   } catch (err) {
-    //     return res.status(500).json({
-    //       success: false,
-    //       message: "An error occurred during file upload",
-    //       error: err.message,
-    //     });
-    //   }
-    // });
-
-    // API endpoint for file upload
-
-    // Update the app.patch for handling file uploads
-    // app.patch("/upload-file/:id", upload.single("file"), async (req, res) => {
-    //   try {
-    //     const { id } = req.params;
-
-    //     // Check if a file was uploaded
-    //     if (!req.file) {
-    //       return res.status(400).json({
-    //         success: false,
-    //         message: "No file uploaded.",
-    //       });
-    //     }
-
-    //     console.log(req.file);
-
-    //     const fileName = req.file.originalname; // Get the original file name
-    //     const mimeType = req.file.mimetype; // Get the MIME type of the file
-    //     const fileBuffer = req.file.buffer; // Get the file buffer from Multer
-
-    //     // Google Drive Authorization
-    //     const auth = await authorize(); // Make sure to implement the authorize function
-
-    //     // Upload file to Google Drive
-    //     const driveResponse = await uploadFileInChunks(
-    //       auth,
-    //       fileName,
-    //       mimeType,
-    //       fileBuffer
-    //     );
-
-    //     // Get the webViewLink
-    //     const fileLink = driveResponse.webViewLink;
-
-    //     console.log(fileLink);
-
-    //     // Update the MongoDB with the file link
-    //     const result = await porjectsCollection.updateOne(
-    //       { _id: new ObjectId(id) },
-    //       { $set: { fileLink: fileLink } }
-    //     );
-
-    //     return res.status(200).json({
-    //       success: true,
-    //       message: "File uploaded and link saved successfully",
-    //       data: {
-    //         fileLink,
-    //         mongoUpdateResult: result,
-    //       },
-    //     });
-    //   } catch (err) {
-    //     return res.status(500).json({
-    //       success: false,
-    //       message: "An error occurred during file upload",
-    //       error: err.message,
-    //     });
-    //   }
-    // });
-
-    app.post("/upload-file/:id", upload.single("file"), async (req, res) => {
-      if (!authClient) {
-        return res
-          .status(500)
-          .json({ error: "Google Drive authorization failed." });
-      }
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded." });
-      }
-
-      const drive = google.drive({ version: "v3", auth: authClient });
-      const fileStream = new Readable();
-      fileStream.push(req.file.buffer);
-      fileStream.push(null);
-
-      const fileMetaData = {
-        name: req.file.originalname || "file",
-        parents: ["1yUGf8duNukcIgv0SuYqz0QhKdjkSxrbE"],
-      };
-
-      const uploadResponse = await drive.files.create({
-        resource: fileMetaData,
-        media: {
-          body: fileStream,
-          mimeType: req.file.mimetype,
-        },
-        fields: "id",
-      });
-
-      const fileId = uploadResponse.data.id;
-      const fileName = uploadResponse.data.name;
-
-      await drive.permissions.create({
-        fileId,
-        requestBody: {
-          role: "reader",
-          type: "anyone",
-        },
-      });
-
-      const file = await drive.files.get({
-        fileId,
-        fields: "webViewLink, webContentLink",
-      });
-
-      console.log({
-        id: req.params.id,
-        fileName: fileName,
-        webViewLink: file.data.webViewLink,
-        downloadableLink: file.data.webContentLink,
-      });
-
-      const result = await porjectsCollection.updateOne(
-        { _id: new ObjectId(req.params.id) },
-        {
-          $push: {
-            files: {
-              fileName: fileName,
-              webViewLink: file.data.webViewLink,
-              downloadableLink: file.data.webContentLink,
-            },
-          },
+          return res.status(httpStatus.OK).json({
+            success: true,
+            message: "User assigned to project successfully",
+          });
+        } catch (err) {
+          return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: err.message || "Something went wrong",
+          });
         }
-      );
-
-      // Return the project details
-      return res.json({
-        success: true,
-        status: httpStatus.OK,
-        message: "File uploaded successfully!",
-        data: result,
-      });
-    });
+      }
+    );
 
     await client.connect();
     await client.db("admin").command({ ping: 1 });
