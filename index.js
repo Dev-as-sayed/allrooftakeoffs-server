@@ -213,7 +213,12 @@ async function run() {
           throw new Error("This email is already exist");
         }
 
-        const user = { ...newUserData, isBlock: false, isDeleted: false };
+        const user = {
+          ...newUserData,
+          roue: "User",
+          isBlock: false,
+          isDeleted: false,
+        };
 
         const createUser = await userCollection.insertOne(user);
         return res.json({
