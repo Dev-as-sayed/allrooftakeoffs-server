@@ -23,12 +23,36 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 // midleWare
+// app.use(
+//   cors({
+//     origin: [
+//       "https://joyful-lollipop-b092b1.netlify.app",
+//       "http://localhost:5173",
+//     ],
+//     credentials: true,
+//   })
+// );
+
+const allowedOrigins = [
+  "https://joyful-lollipop-b092b1.netlify.app",
+  "http://localhost:5173",
+  // Add more origins as needed
+];
+
 app.use(
   cors({
-    origin: [
-      "https://joyful-lollipop-b092b1.netlify.app",
-      "http://localhost:5173",
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or CURL requests)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        // Origin is allowed
+        callback(null, true);
+      } else {
+        // Origin is not allowed
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
