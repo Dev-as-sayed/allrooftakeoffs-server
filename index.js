@@ -8,6 +8,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 const multer = require("multer");
+const serverless = require("serverless-http");
 
 // google drive related
 const fs = require("fs");
@@ -714,3 +715,5 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+module.exports.handler = serverless(app);
