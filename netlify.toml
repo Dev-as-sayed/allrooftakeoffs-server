@@ -1,4 +1,0 @@
-[build]
-  command = "npm install"  # Optional, to install dependencies before deploying
-  publish = "build"         # Specify the folder for frontend assets (if any)
-  functions = "netlify/functions"
