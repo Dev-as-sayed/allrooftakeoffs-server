@@ -8,7 +8,6 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 const multer = require("multer");
-const serverless = require("serverless-http");
 
 // google drive related
 const fs = require("fs");
@@ -20,14 +19,14 @@ const upload = multer();
 
 dotenv.config();
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 5000;
 app.use(cors());
-app.use(express.json());
 // midleWare
 // app.use(
 //   cors({
 //     origin: [
-//       "https://joyful-lollipop-b092b1.netlify.app",
+//       "https://allrooftakeoffs-client.vercel.app",
 //       "http://localhost:5173",
 //     ],
 //     credentials: true,
@@ -35,22 +34,21 @@ app.use(express.json());
 // );
 
 const allowedOrigins = [
-  "https://joyful-lollipop-b092b1.netlify.app",
+  "https://allrooftakeoffs-client.vercel.app",
   "http://localhost:5173",
-  // Add more origins as needed
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or CURL requests)
+      // Allow requests with no origin (e.g., mobile apps or CURL requests)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
-        // Origin is allowed
+        // If origin is in the allowed list, allow it
         callback(null, true);
       } else {
-        // Origin is not allowed
+        // If origin is not allowed, reject it
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -253,7 +251,6 @@ async function run() {
 
         const isPasswordMatch = await bcrypt.compare(password, user.password);
         if (!isPasswordMatch) {
-          console.log("Password does not match");
           throw new Error("Invalid email or password");
         }
 
@@ -285,41 +282,42 @@ async function run() {
       authenticateAdmin(),
       async (req, res) => {
         try {
-          let querys = {};
-          const { serch } = req.query;
+          let query = {};
+          const { search, recent } = req.query;
 
-          // if (serch) {
-          //   querys = serch;
-          // }
-          // console.log(querys);
-          console.log(serch);
-
-          if (serch) {
-            querys = {
+          // Search filter
+          if (search) {
+            query = {
               $or: [
-                ({ name: { $regex: serch, $options: "i" } },
-                { email: { $regex: serch, $options: "i" } },
-                { address: { $regex: serch, $options: "i" } },
-                { phone: { $regex: serch, $options: "i" } }),
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+                { address: { $regex: search, $options: "i" } },
+                { phone: { $regex: search, $options: "i" } },
               ],
             };
           }
-          console.log(querys);
+
+          // Recent users filter
+          if (recent === "true") {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            query.createdAt = { $gte: oneWeekAgo };
+          }
 
           const users = await userCollection
-            .find(querys, { projection: { password: 0 } })
+            .find(query, { projection: { password: 0 } })
             .toArray();
-          return res.json({
+          res.json({
             success: true,
             status: httpStatus.OK,
             message: "All users retrieved successfully",
             data: users,
           });
         } catch (err) {
-          return res.json({
-            success: true,
-            status: httpStatus.OK,
-            message: err.message || "Someting went wrong",
+          res.status(500).json({
+            success: false,
+            status: httpStatus.INTERNAL_SERVER_ERROR,
+            message: err.message || "Something went wrong",
             data: err,
           });
         }
@@ -335,8 +333,6 @@ async function run() {
           const users = await userCollection
             .find({}, { projection: { _id: 1, name: 1, image: 1 } })
             .toArray();
-
-          console.log(users);
 
           return res.json({
             success: true,
@@ -410,35 +406,41 @@ async function run() {
 
     app.get("/get-projects", authenticateToken(), async (req, res) => {
       try {
-        let querys = {};
-        const serch = req.query;
+        const { search, startDate } = req.query;
+        let query = {};
 
-        if (serch) {
-          querys = serch;
-        }
-
-        if (serch) {
-          querys = {
+        if (search) {
+          query = {
             $or: [
-              ({ name: { $regex: serch, $options: "i" } },
-              { description: { $regex: serch, $options: "i" } },
-              { country: { $regex: serch, $options: "i" } },
-              { posting_date: { $regex: serch, $options: "i" } },
-              { cost: { $regex: serch, $options: "i" } },
-              { dateline: { $regex: serch, $options: "i" } },
-              { summary: { $regex: serch, $options: "i" } }),
+              { name: { $regex: search, $options: "i" } },
+              { description: { $regex: search, $options: "i" } },
+              { location: { $regex: search, $options: "i" } },
+              { posting_date: { $regex: search, $options: "i" } },
+              { cost: { $regex: search, $options: "i" } },
+              { dateline: { $regex: search, $options: "i" } },
+              { summary: { $regex: search, $options: "i" } },
             ],
           };
         }
 
-        const result = await porjectsCollection.find().toArray();
+        if (startDate) {
+          query.posting_date = { $gte: new Date(startDate) };
+        }
+
+        const result = await porjectsCollection.find(query).toArray();
         return res.json({
           success: true,
           status: httpStatus.OK,
-          message: "All projects retrive successfully",
+          message: "Projects retrieved successfully",
           data: result,
         });
-      } catch (err) {}
+      } catch (err) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          message: "Failed to retrieve projects",
+          error: err.message,
+        });
+      }
     });
 
     app.get("/get-project/:id", authenticateToken(), async (req, res) => {
@@ -487,8 +489,6 @@ async function run() {
       "/get-projects/:assignedId",
       // authenticateToken(),
       async (req, res) => {
-        console.log("hit the endpoint");
-
         try {
           const { assignedId } = req.params; // Extract assigned ID from request parameters
 
@@ -521,7 +521,6 @@ async function run() {
       authenticateAdmin(),
       upload.single("file"),
       async (req, res) => {
-        console.log(req.file);
         authClient = await authorize(); // Authorize once at startup
 
         if (!authClient) {
@@ -554,8 +553,6 @@ async function run() {
 
         const fileId = uploadResponse.data.id;
         const fileName = req.file.originalname;
-
-        console.log(uploadResponse);
 
         await drive.permissions.create({
           fileId,
@@ -715,5 +712,3 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
-module.exports.handler = serverless(app);
