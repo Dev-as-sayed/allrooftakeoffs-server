@@ -23,11 +23,10 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 app.use(cors());
 
-
 const allowedOrigins = [
   // "https://allrooftakeoffs-client.vercel.app",
-  "http://www.allrooftakeoffs.com.au"
-  "http://allrooftakeoffs.com.au"
+  "http://www.allrooftakeoffs.com.au",
+  "http://allrooftakeoffs.com.au",
   // "http://localhost:5173",
 ];
 
