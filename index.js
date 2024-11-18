@@ -25,8 +25,8 @@ app.use(cors());
 
 const allowedOrigins = [
   // "https://allrooftakeoffs-client.vercel.app",
-  "http://www.allrooftakeoffs.com.au",
-  "http://allrooftakeoffs.com.au",
+  "https://www.allrooftakeoffs.com.au",
+  "https://allrooftakeoffs.com.au",
   // "http://localhost:5173",
 ];
 
