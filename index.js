@@ -24,10 +24,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 
 const allowedOrigins = [
-  // "https://allrooftakeoffs-client.vercel.app",
-  "https://www.allrooftakeoffs.com.au",
-  "https://allrooftakeoffs.com.au",
-  // "http://localhost:5173",
+  "https://api.allrooftakeoffs.com.au",
+  "https://www.api.allrooftakeoffs.com.au",
 ];
 
 app.use(
