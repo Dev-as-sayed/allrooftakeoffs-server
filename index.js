@@ -25,7 +25,6 @@ app.use(cors());
 
 const allowedOrigins = [
   "https://api.allrooftakeoffs.com.au",
-  "https://www.api.allrooftakeoffs.com.au",
   "https://localhost:5000",
 ];
 
