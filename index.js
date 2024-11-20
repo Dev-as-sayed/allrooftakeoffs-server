@@ -25,7 +25,11 @@ const PORT = process.env.PORT || 5000;
 // midleWare
 app.use(
   cors({
-    origin: ["https://api.allrooftakeoffs.com.au", "http://localhost:5173"],
+    origin: [
+      "https://api.allrooftakeoffs.com.au",
+      "https://www.api.allrooftakeoffs.com.au",
+      "http://localhost:5173",
+    ],
     credentials: true,
   })
 );
