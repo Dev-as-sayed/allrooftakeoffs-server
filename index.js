@@ -37,8 +37,8 @@ https.createServer(options, app).listen(5000, () => {
 });
 
 const allowedOrigins = [
-  "https://api.allrooftakeoffs.com.au",
-  "https://www.api.allrooftakeoffs.com.au",
+  "https://allrooftakeoffs.com.au",
+  "https://www.allrooftakeoffs.com.au",
   "http://localhost:5173",
 ];
 app.use(
