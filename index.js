@@ -47,12 +47,13 @@ app.use(
 app.options("*", cors());
 
 // Add custom header for credentials
-app.use(function (request, response, next) {
-  response.header("Access-Control-Allow-Origin", "*");
-  response.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
+app.use((req, res, next) => {
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://www.allrooftakeoffs.com.au"
   );
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   next();
 });
 
@@ -71,7 +72,6 @@ const porjectsCollection = client.db("ART").collection("Projects");
 
 let authClient;
 
-// Function to authorize Google Drive API
 // Function to authorize Google Drive API
 async function authorize() {
   const jwtClient = new google.auth.JWT(
