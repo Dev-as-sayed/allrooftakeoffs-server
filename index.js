@@ -23,38 +23,40 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
 // midleWare
-app.use(
-  cors({
-    origin: [
-      "https://api.allrooftakeoffs.com.au",
-      "https://www.api.allrooftakeoffs.com.au",
-      "http://localhost:5173",
-    ],
-    credentials: true,
-  })
-);
-//
-//   "https://api.allrooftakeoffs.com.au",
-//   "https://localhost:5000",
-// ];
-
 // app.use(
 //   cors({
-//     origin: (origin, callback) => {
-//       // Allow requests with no origin (e.g., mobile apps or CURL requests)
-//       if (!origin) return callback(null, true);
-
-//       if (allowedOrigins.includes(origin)) {
-//         // If origin is in the allowed list, allow it
-//         callback(null, true);
-//       } else {
-//         // If origin is not allowed, reject it
-//         callback(new Error("Not allowed by CORS"));
-//       }
-//     },
+//     origin: [
+//       "https://api.allrooftakeoffs.com.au",
+//       "https://www.api.allrooftakeoffs.com.au",
+//       "http://localhost:5173",
+//     ],
 //     credentials: true,
 //   })
 // );
+//
+
+const allowedOrigins = [
+  "https://api.allrooftakeoffs.com.au",
+  "https://www.api.allrooftakeoffs.com.au",
+  "http://localhost:5173",
+];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., mobile apps or CURL requests)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        // If origin is in the allowed list, allow it
+        callback(null, true);
+      } else {
+        // If origin is not allowed, reject it
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 const uri =
   "mongodb+srv://ART-dev:ART-dev@artcluster0.8rabx.mongodb.net/?retryWrites=true&w=majority&appName=ARTCluster0";
