@@ -23,39 +23,33 @@ const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
-const options = {
-  key: fs.readFileSync(
-    "/etc/letsencrypt/live/api.allrooftakeoffs.com.au/privkey.pem"
-  ),
-  cert: fs.readFileSync(
-    "/etc/letsencrypt/live/api.allrooftakeoffs.com.au/fullchain.pem"
-  ),
-};
+// const allowedOrigins = [
+//   "https://allrooftakeoffs.com.au",
+//   "https://www.allrooftakeoffs.com.au",
+//   "http://localhost:5173",
+// ];
+// app.use(
+//   cors({
+//     origin: (origin, callback) => {
+//       // Allow requests with no origin (e.g., mobile apps or CURL requests)
+//       if (!origin) return callback(null, true);
 
-https.createServer(options, app).listen(5000, () => {
-  console.log("API server running on https://api.allrooftakeoffs.com.au:5000");
-});
+//       if (allowedOrigins.includes(origin)) {
+//         // If origin is in the allowed list, allow it
+//         callback(null, true);
+//       } else {
+//         // If origin is not allowed, reject it
+//         callback(new Error("Not allowed by CORS"));
+//       }
+//     },
+//     credentials: true,
+//   })
+// );
 
-const allowedOrigins = [
-  "https://allrooftakeoffs.com.au",
-  "https://www.allrooftakeoffs.com.au",
-  "http://localhost:5173",
-];
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g., mobile apps or CURL requests)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        // If origin is in the allowed list, allow it
-        callback(null, true);
-      } else {
-        // If origin is not allowed, reject it
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
+    origin: "https://www.allrooftakeoffs.com.au", // Allow this origin
+    credentials: true, // Allow cookies and credentials
   })
 );
 
