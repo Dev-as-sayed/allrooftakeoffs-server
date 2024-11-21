@@ -23,35 +23,34 @@ const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
-// const allowedOrigins = [
-//   "https://allrooftakeoffs.com.au",
-//   "https://www.allrooftakeoffs.com.au",
-//   "http://localhost:5173",
-// ];
-// app.use(
-//   cors({
-//     origin: (origin, callback) => {
-//       // Allow requests with no origin (e.g., mobile apps or CURL requests)
-//       if (!origin) return callback(null, true);
-
-//       if (allowedOrigins.includes(origin)) {
-//         // If origin is in the allowed list, allow it
-//         callback(null, true);
-//       } else {
-//         // If origin is not allowed, reject it
-//         callback(new Error("Not allowed by CORS"));
-//       }
-//     },
-//     credentials: true,
-//   })
-// );
+const allowedOrigins = [
+  "https://allrooftakeoffs.com.au",
+  "https://www.allrooftakeoffs.com.au",
+  "http://localhost:5173",
+];
 
 app.use(
   cors({
-    origin: "https://www.allrooftakeoffs.com.au", // Allow this origin
-    credentials: true, // Allow cookies and credentials
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
   })
 );
+
+// Handle preflight requests
+app.options("*", cors());
+
+// Add custom header for credentials
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
 
 const uri =
   "mongodb+srv://ART-dev:ART-dev@artcluster0.8rabx.mongodb.net/?retryWrites=true&w=majority&appName=ARTCluster0";
