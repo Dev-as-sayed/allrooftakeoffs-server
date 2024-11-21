@@ -8,9 +8,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 const multer = require("multer");
+const https = require("https");
+const fs = require("fs");
 
 // google drive related
-const fs = require("fs");
 const { google } = require("googleapis");
 const apikeys = require("./apikeys.json");
 const { Readable } = require("stream");
@@ -22,18 +23,18 @@ const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
-// midleWare
-// app.use(
-//   cors({
-//     origin: [
-//       "https://api.allrooftakeoffs.com.au",
-//       "https://www.api.allrooftakeoffs.com.au",
-//       "http://localhost:5173",
-//     ],
-//     credentials: true,
-//   })
-// );
-//
+const options = {
+  key: fs.readFileSync(
+    "/etc/letsencrypt/live/api.allrooftakeoffs.com.au/privkey.pem"
+  ),
+  cert: fs.readFileSync(
+    "/etc/letsencrypt/live/api.allrooftakeoffs.com.au/fullchain.pem"
+  ),
+};
+
+https.createServer(options, app).listen(5000, () => {
+  console.log("API server running on https://api.allrooftakeoffs.com.au:5000");
+});
 
 const allowedOrigins = [
   "https://api.allrooftakeoffs.com.au",

@@ -18,6 +18,7 @@
     "fs": "^0.0.1-security",
     "googleapis": "^144.0.0",
     "http-status": "^1.7.4",
+    "https": "^1.0.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.9.0",
