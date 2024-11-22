@@ -24,9 +24,9 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
-  "https://allrooftakeoffs.com.au",
+  // "https://allrooftakeoffs.com.au",
   "https://www.allrooftakeoffs.com.au",
-  "http://localhost:5173",
+  // "http://localhost:5173",
 ];
 
 app.use(
