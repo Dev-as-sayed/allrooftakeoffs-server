@@ -393,6 +393,18 @@ async function run() {
 
         const result = await porjectsCollection.insertOne(project);
 
+        if (project.assignedOn) {
+          const user = await userCollection.findOne({
+            _id: new ObjectId("assignedOn._id"),
+          });
+
+          const projectAssign = user.projectAssign + 1;
+          const updateUserData = await userCollection.updateOne(
+            { _id: new ObjectId("assignedOn._id") },
+            { $set: { projectAssign: projectAssign } }
+          );
+        }
+
         return res.json({
           success: true,
           status: httpStatus.OK,
@@ -629,6 +641,15 @@ async function run() {
             { $set: { assignedOn } }
           );
 
+          const user = await userCollection.findOne({
+            _id: new ObjectId("assignedOn._id"),
+          });
+
+          const projectAssign = user.projectAssign + 1;
+          const updateUserData = await userCollection.updateOne(
+            { _id: new ObjectId("assignedOn._id") },
+            { $set: { projectAssign: projectAssign } }
+          );
           if (updatedProject.modifiedCount === 0) {
             return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
               success: false,
