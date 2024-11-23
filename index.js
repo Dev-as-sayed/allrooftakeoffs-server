@@ -395,12 +395,12 @@ async function run() {
 
         if (project.assignedOn) {
           const user = await userCollection.findOne({
-            _id: new ObjectId("assignedOn._id"),
+            _id: new ObjectId(`${assignedOn._id}`),
           });
 
           const projectAssign = user.projectAssign + 1;
           const updateUserData = await userCollection.updateOne(
-            { _id: new ObjectId("assignedOn._id") },
+            { _id: new ObjectId(`${assignedOn._id}`) },
             { $set: { projectAssign: projectAssign } }
           );
         }
@@ -642,12 +642,12 @@ async function run() {
           );
 
           const user = await userCollection.findOne({
-            _id: new ObjectId("assignedOn._id"),
+            _id: new ObjectId(`${assignedOn._id}`),
           });
 
           const projectAssign = user.projectAssign + 1;
           const updateUserData = await userCollection.updateOne(
-            { _id: new ObjectId("assignedOn._id") },
+            { _id: new ObjectId(`${assignedOn._id}`) },
             { $set: { projectAssign: projectAssign } }
           );
           if (updatedProject.modifiedCount === 0) {
