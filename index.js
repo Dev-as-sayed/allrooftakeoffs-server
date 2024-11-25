@@ -214,7 +214,7 @@ async function run() {
 
         const user = {
           ...newUserData,
-          roue: "User",
+          role: "User",
           isBlock: false,
           isDeleted: false,
         };
